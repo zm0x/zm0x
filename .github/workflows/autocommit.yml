@@ -1,0 +1,41 @@
+name: Auto Commit Changes
+
+on:
+  schedule:
+    - cron: "0 */8 * * *"  # Every 8 hours (UTC)
+  workflow_dispatch:       # Allow manual run
+
+permissions:
+  contents: write
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update date
+        run: |
+          echo "## Update on $(date -u +'%Y-%m-%d %H:%M:%S UTC')" > zee_commit.md
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.git-check.outputs.changed == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v2.3.0
+        with:
+          commit_message: "Auto update by zm0x"
+          branch: ${{ github.ref_name }}
+          commit_options: ''
+          file_pattern: 'zee_commit.md'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
